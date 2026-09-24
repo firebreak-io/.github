@@ -1,0 +1,26 @@
+name: Docs
+
+# This repository publishes the standard, so it is also its first consumer.
+# A change that breaks the checks fails here before it reaches anyone else,
+# which is the safety net for the moving v1 tag.
+#
+# No branch filter on pull_request: `branches` filters the BASE branch, so
+# [main] silently skips every stacked pull request. No path filter: renaming a
+# non-Markdown file rots links without touching any .md.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Referenced by path, not by firebreak-io/.github@v1: this must test the
+      # working tree, not the last released tag, or the release gate tests
+      # whatever already shipped.
+      - uses: ./actions/check-docs

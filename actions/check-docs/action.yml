@@ -1,0 +1,82 @@
+name: Check documentation
+description: >-
+  Link and structure checks for the Firebreak documentation standard. Verifies
+  that relative links and heading anchors resolve, that root Markdown is on the
+  allowlist, that every ADR and runbook has an index row, and that no living
+  document carries a forward-looking heading.
+
+inputs:
+  record-dir:
+    description: >-
+      Directory of point-in-time records, exempt from the forward-looking
+      heading check and from link checking. A spec or a plan describes work
+      that has not happened yet, and a record held to current-tree accuracy is
+      not a record.
+    required: false
+    default: docs/superpowers
+
+runs:
+  using: composite
+  steps:
+    # This action does not check out the caller. It runs against the job's
+    # workspace root, which is why the adoption guide insists on
+    # actions/checkout before this step, at the workspace root, not into a
+    # path: subdirectory: a composite action's own steps run in the
+    # workspace root regardless of where the caller's checkout put the
+    # repository, and do not inherit a job-level
+    # defaults.run.working-directory either.
+    #
+    # This checks for .git, the same marker the checker itself uses to find a
+    # repository root, rather than README.md. README.md tells you whether a
+    # repository documents itself, which is a different question from whether
+    # actions/checkout ran; checking it here would misreport a repository that
+    # was checked out correctly but has no README.md at its root as an unrun
+    # checkout, which is not the failure that happened.
+    - name: Assert the repository was checked out
+      shell: bash
+      run: |
+        if [ ! -e .git ]; then
+          echo "check-docs: no .git in the workspace root." >&2
+          echo "check-docs: this action runs against the workspace root, and does" >&2
+          echo "check-docs: not check out your repository itself. Add" >&2
+          echo "check-docs: actions/checkout@v4 to this job before this step, with" >&2
+          echo "check-docs: no path: input: a checkout placed in a subdirectory is" >&2
+          echo "check-docs: not visible here." >&2
+          exit 2
+        fi
+
+    # RECORD_DIR and ACTION_PATH are passed through env rather than
+    # interpolated as "${{ ... }}" directly into the run body. GitHub
+    # substitutes a "${{ }}" expression textually before bash ever parses the
+    # line, so a value containing a quote character escapes whatever
+    # quoting surrounds it in the script and runs as shell. inputs.record-dir
+    # is caller-supplied and must never be interpolated this way; it goes
+    # through env in both steps that use it. github.action_path is not
+    # caller-supplied, being a filesystem path the runner derives from the
+    # action reference rather than repository content, so it does not carry
+    # the same attacker path, but it is routed through env anyway, both for
+    # consistency with the pattern used everywhere else in this file and
+    # because a run body with no "${{ }}" expression left in it is easier to
+    # audit than one with a single exception in it.
+    - name: Link check
+      shell: bash
+      env:
+        RECORD_DIR: ${{ inputs.record-dir }}
+      run: |
+        docker run --rm -v "$PWD:/input" --workdir /input \
+          lycheeverse/lychee:0.24.2 \
+          --offline --no-progress --include-fragments \
+          --exclude-path "$RECORD_DIR" .
+
+    - name: Structure check
+      shell: bash
+      env:
+        CHECK_DOCS_RECORD_DIR: ${{ inputs.record-dir }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        docker run --rm \
+          -v "$PWD:/input" \
+          -v "$ACTION_PATH/check-docs.sh:/check-docs.sh:ro" \
+          --workdir /input \
+          -e CHECK_DOCS_RECORD_DIR \
+          alpine:3.22 sh /check-docs.sh
