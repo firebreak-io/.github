@@ -14,9 +14,9 @@ Answer one question about the document you are holding:
 | The reader's question | Home | Editable? |
 |---|---|---|
 | What is this, and how do I start? | `README.md` | Yes |
-| Why is it built this way? | [`docs/adr/`](../adr/README.md) | No. Supersede with a new ADR |
+| Why is it built this way? | `docs/adr/` | No. Supersede with a new ADR |
 | What does it do? | `docs/` | Yes |
-| How do I work on it, and what will bite me? | [`docs/runbooks/`](../runbooks/README.md) | Yes, that is the point |
+| How do I work on it, and what will bite me? | `docs/runbooks/` | Yes, that is the point |
 | How was this designed and built? | `docs/superpowers/{specs,plans}/` | No. A point-in-time record |
 | What rules does every Firebreak repo follow? | `docs/standards/` | Yes, but change it upstream first |
 | What did this review find? | The pull request or issue | Not a repository document |
