@@ -5,9 +5,9 @@
 # copies unchanged into a Firebreak repository of any language.
 #
 # It deliberately does not shell out to git. The check runs inside a container
-# with only the repository directory mounted, and this repository is often
-# checked out as a worktree, where .git is a file pointing somewhere outside
-# that mount.
+# with only the repository directory mounted, and a git worktree's .git is a
+# file pointing somewhere outside that mount rather than a directory, which
+# the -e check further down accounts for.
 #
 # Checks:
 #   1. Every .md at the repository root is on the allowlist.
@@ -72,8 +72,9 @@ FORWARD_HEADINGS='(^|[^[:alnum:]])(roadmap|backlog|coming soon|future work|plann
 #
 # GitHub renders a Setext heading identically to an ATX one, so a document
 # that used "Roadmap\n=======" instead of "## Roadmap" passed check 3 clean
-# (#33): a plain grep for "#+" line prefixes never saw it, because there is
-# no "#" in a Setext heading at all. Recognising both requires seeing a
+# (upstream issue #33, tracked where this checker originates, not in this
+# repository): a plain grep for "#+" line prefixes never saw it, because there
+# is no "#" in a Setext heading at all. Recognising both requires seeing a
 # heading as two lines together (the text, then its underline), which a
 # single grep pattern cannot express, hence an awk pass instead.
 #
@@ -81,8 +82,8 @@ FORWARD_HEADINGS='(^|[^[:alnum:]])(roadmap|backlog|coming soon|future work|plann
 # function cannot cross `find -exec`, and the fence handling below is the
 # same tracked-marker approach as strip_fences above: a single boolean
 # flipped by either ``` or ~~~ lets a ~~~ block nested inside a ```markdown
-# example close the outer fence early, which is the same #38 false accept
-# arriving through headings instead of index rows.
+# example close the outer fence early, which is the same upstream issue #38
+# false accept arriving through headings instead of index rows.
 #
 # `find -exec ... {} +` hands awk every matched file in one process, so state
 # left over from one file would blind the checker to the next. FNR == 1, not
@@ -96,7 +97,7 @@ FORWARD_HEADINGS='(^|[^[:alnum:]])(roadmap|backlog|coming soon|future work|plann
 # delimiter never matched "---" (it was "---\r"), and a CRLF Setext underline
 # never matched /^(=+|-+)[ \t]*$/ (it was "=======\r"), so a Setext heading in
 # a CRLF file passed check 3 cleanly while the same heading in an LF file
-# failed: the same #33 gap, reopened by line endings alone.
+# failed: the same upstream issue #33 gap, reopened by line endings alone.
 HEADINGS_AWK='
     function fence_run(s, ch,   n) {
         n = 0
@@ -139,8 +140,8 @@ HEADINGS_AWK='
 # Records, not living documents, and exempt from check 3. A plan is supposed to
 # describe work that has not happened yet; that is what makes it a plan.
 #
-# Overridable so the Makefile and any caller can set it once. Not every
-# repository keeps point-in-time records in the same place.
+# Overridable so any caller can set it once rather than this being hardcoded.
+# Not every repository keeps point-in-time records in the same place.
 RECORD_DIR="./${CHECK_DOCS_RECORD_DIR:-docs/superpowers}"
 
 failed=0
@@ -189,9 +190,10 @@ done
 # The per-document loop below runs whether or not that directory's index
 # exists. Guarding the whole loop on the index, which is what this check did
 # first for ADRs alone, meant that deleting or renaming the index silently
-# switched off every check for the documents in that directory while
-# `make docs` still reported success: the single edit that breaks navigation
-# into a directory was also the single edit that nothing could catch (#23).
+# switched off every check for the documents in that directory while this
+# script still reported success: the single edit that breaks navigation into
+# a directory was also the single edit that nothing could catch (upstream
+# issue #23, tracked where this checker originates, not in this repository).
 # That failure mode is closed here for both docs/adr and docs/runbooks, not
 # only the directory it was first found in.
 #
@@ -208,9 +210,10 @@ done
 #
 # grep has no idea what a fence is, so an index row written inside a
 # ```markdown example satisfied the index check while the document had no
-# real row (#38). Fences are recognised at up to three spaces of indentation,
-# the same limit CommonMark applies to headings; at four the line is an
-# indented code block and its content is not a fence marker.
+# real row (upstream issue #38, tracked where this checker originates, not
+# in this repository). Fences are recognised at up to three spaces of
+# indentation, the same limit CommonMark applies to headings; at four the
+# line is an indented code block and its content is not a fence marker.
 #
 # The marker character and the run length of the opening fence are tracked,
 # not just an in/out toggle, and a fence only closes on a run of the same
@@ -218,9 +221,10 @@ done
 # CommonMark's own closing rule. Without it, a single boolean flipped by
 # either ``` or ~~~ let a ~~~ block nested inside a ```markdown example close
 # the outer fence early, so a fake row inside the nested block was read as
-# ordinary text again: the same #38 false accept, arriving through a second
-# marker. Interval regexes such as /^`{3,}/ are avoided because busybox awk's
-# support for them is not something this check should depend on.
+# ordinary text again: the same upstream issue #38 false accept, arriving
+# through a second marker. Interval regexes such as /^`{3,}/ are avoided
+# because busybox awk's support for them is not something this check should
+# depend on.
 strip_fences() {
     awk '
         function fence_run(s, ch,   n) {
@@ -292,7 +296,8 @@ do
             # into this directory.
             # The filename goes into an ERE, so its dots are wildcards
             # unless escaped: an index row reading (0001-fooXmd) satisfied
-            # the check for 0001-foo.md (#35).
+            # the check for 0001-foo.md (upstream issue #35, tracked where
+            # this checker originates, not in this repository).
             #
             # The closing bracket has to come first in the class, right
             # after the opening one: a bracket expression is not
@@ -337,10 +342,10 @@ done
 # find respects neither .gitignore nor hidden directories: node_modules/ in a
 # TypeScript repo, vendor/ in a Go one, and the git-ignored .superpowers/
 # workspace all carry Roadmap and TODO headings. The link check already skips
-# those. The two checks now agree on scope: the Makefile passes lychee the
-# same record-directory exclusion, so a point-in-time record is out of scope
-# for both. A record whose links are held to current-tree accuracy is not a
-# point-in-time record, which is rule 5.
+# those. The two checks now agree on scope: whatever invokes them passes
+# lychee the same record-directory exclusion, so a point-in-time record is
+# out of scope for both. A record whose links are held to current-tree
+# accuracy is not a point-in-time record, which is rule 5.
 #
 # HEADINGS_AWK prints "FILENAME:LINE:text" for every heading that matches
 # FORWARD_HEADINGS, with fences and front matter already stripped, so a
