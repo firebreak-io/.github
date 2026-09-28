@@ -142,7 +142,18 @@ HEADINGS_AWK='
 #
 # Overridable so any caller can set it once rather than this being hardcoded.
 # Not every repository keeps point-in-time records in the same place.
-RECORD_DIR="./${CHECK_DOCS_RECORD_DIR:-docs/superpowers}"
+#
+# A trailing slash (or several) is stripped before the "./" prefix is added.
+# Every comparison below that builds a path from RECORD_DIR (the find
+# exclusion here, the "$RECORD_DIR is exempt" message) compares a directory
+# name, and "docs/records/" is not the same string as "docs/records": left
+# untouched, a caller-supplied value ending in "/" silently stops matching
+# anything, and the exemption it names stops applying.
+_record_dir_raw="${CHECK_DOCS_RECORD_DIR:-docs/superpowers}"
+while [ "${_record_dir_raw%/}" != "$_record_dir_raw" ]; do
+    _record_dir_raw=${_record_dir_raw%/}
+done
+RECORD_DIR="./$_record_dir_raw"
 
 failed=0
 
@@ -304,7 +315,17 @@ do
             # backslash-escaped internally (POSIX leaves backslash literal
             # inside one), so a "]" anywhere else in the class would close
             # it early and split the class in two.
-            esc=$(printf '%s' "$name" | sed 's/[].[*^$\]/\\&/g')
+            #
+            # The class covers every ERE metacharacter that can appear in a
+            # filename, not only the ones a dash-delimited ADR or runbook
+            # name happens to use: "( ) + ? { } |" are ERE-significant too,
+            # and were missing here. A filename such as restore+db.md or
+            # opts{a|b}.md went into the row pattern with those characters
+            # still live, so a wrong index row could satisfy it (or, for an
+            # unbalanced "(" or "{", made grep -E itself error out, which
+            # surfaced as a misdiagnosed "no row in the index table" instead
+            # of the escaping bug it actually was).
+            esc=$(printf '%s' "$name" | sed 's/[].[*^$\()+?{}|]/\\&/g')
 
             # Accept the spellings that resolve: a bare name, a ./ prefix, a
             # #fragment, and a "title". Rejecting those told the author to
