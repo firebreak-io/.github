@@ -45,25 +45,64 @@ runs:
           exit 2
         fi
 
+    # inputs.record-dir is normalised exactly once, here, rather than in each
+    # step that uses it. A trailing slash (or several) makes every path this
+    # action and check-docs.sh build from the value compare a directory name
+    # against that name plus a slash, which never matches: the link and
+    # structure exemptions both silently stop applying while their messages
+    # keep calling the directory exempt. Stripping it here and exporting the
+    # result through $GITHUB_ENV means both later steps see the same
+    # normalised value instead of each repeating the strip.
+    - name: Normalise record-dir
+      shell: bash
+      env:
+        RAW_RECORD_DIR: ${{ inputs.record-dir }}
+      run: |
+        dir="$RAW_RECORD_DIR"
+        while [ "${dir%/}" != "$dir" ]; do
+          dir=${dir%/}
+        done
+        echo "RECORD_DIR=$dir" >> "$GITHUB_ENV"
+
     # RECORD_DIR and ACTION_PATH are passed through env rather than
     # interpolated as "${{ ... }}" directly into the run body. GitHub
     # substitutes a "${{ }}" expression textually before bash ever parses the
     # line, so a value containing a quote character escapes whatever
     # quoting surrounds it in the script and runs as shell. inputs.record-dir
     # is caller-supplied and must never be interpolated this way; it goes
-    # through env in both steps that use it. github.action_path is not
-    # caller-supplied, being a filesystem path the runner derives from the
-    # action reference rather than repository content, so it does not carry
-    # the same attacker path, but it is routed through env anyway, both for
-    # consistency with the pattern used everywhere else in this file and
-    # because a run body with no "${{ }}" expression left in it is easier to
-    # audit than one with a single exception in it.
+    # through env in both steps that use it, and by this point RECORD_DIR is
+    # the normalised value the previous step wrote to $GITHUB_ENV, not
+    # inputs.record-dir directly. github.action_path is not caller-supplied,
+    # being a filesystem path the runner derives from the action reference
+    # rather than repository content, so it does not carry the same attacker
+    # path, but it is routed through env anyway, both for consistency with
+    # the pattern used everywhere else in this file and because a run body
+    # with no "${{ }}" expression left in it is easier to audit than one with
+    # a single exception in it.
     - name: Link check
       shell: bash
       env:
-        RECORD_DIR: ${{ inputs.record-dir }}
+        RECORD_DIR: ${{ env.RECORD_DIR }}
       run: |
-        docker run --rm -v "$PWD:/input" --workdir /input \
+        # Lychee exits 0 both when every discovered link resolved and when
+        # record-dir excluded every Markdown file in the tree: an
+        # over-broad record-dir makes this step report success having
+        # verified nothing. Lychee's own totals cannot tell those two cases
+        # apart ("0 Total" means both "nothing was scanned" and "what was
+        # scanned had no links in it"), so this counts Markdown files
+        # outside record-dir directly, independent of anything lychee
+        # reports, and fails before lychee ever runs if that count is zero.
+        md_count=$(find . -path ./.git -prune -o -path "./$RECORD_DIR" -prune -o -type f -name '*.md' -print | wc -l)
+        if [ "$md_count" -eq 0 ]; then
+          echo "check-docs: no Markdown files found outside record-dir ($RECORD_DIR)." >&2
+          echo "check-docs: the link check has nothing to verify, which is reported as" >&2
+          echo "check-docs: failure rather than success. An over-broad record-dir input" >&2
+          echo "check-docs: is the likely cause: it should exclude only point-in-time" >&2
+          echo "check-docs: records, not the whole documentation tree." >&2
+          exit 1
+        fi
+
+        docker run --rm -v "$PWD:/input:ro" --workdir /input \
           lycheeverse/lychee:0.24.2 \
           --offline --no-progress --include-fragments \
           --exclude-path "$RECORD_DIR" .
@@ -71,11 +110,11 @@ runs:
     - name: Structure check
       shell: bash
       env:
-        CHECK_DOCS_RECORD_DIR: ${{ inputs.record-dir }}
+        CHECK_DOCS_RECORD_DIR: ${{ env.RECORD_DIR }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         docker run --rm \
-          -v "$PWD:/input" \
+          -v "$PWD:/input:ro" \
           -v "$ACTION_PATH/check-docs.sh:/check-docs.sh:ro" \
           --workdir /input \
           -e CHECK_DOCS_RECORD_DIR \
