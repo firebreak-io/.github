@@ -1,0 +1,46 @@
+name: Docs
+
+# Link and structure checks for docs/standards/documentation.md.
+#
+# No branch filter on pull_request: `branches` filters the BASE branch, so a
+# filter of [main] silently skips every stacked pull request. No path filter:
+# renaming a non-Markdown file rots links without touching any .md.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    env:
+      # Point-in-time records: exempt from both checks. Must match the path the
+      # standard's routing table names. No trailing slash.
+      RECORD_DIR: docs/records
+    steps:
+      - uses: actions/checkout@v4
+
+      # Lychee exits 0 when RECORD_DIR excludes every Markdown file, having
+      # verified nothing, so an empty scan is reported as a failure here.
+      - name: Link check
+        run: |
+          md_count=$(find . -path ./.git -prune -o -path "./$RECORD_DIR" -prune -o -type f -name '*.md' -print | wc -l)
+          if [ "$md_count" -eq 0 ]; then
+            echo "check-docs: no Markdown files found outside $RECORD_DIR, so the link check has nothing to verify." >&2
+            exit 1
+          fi
+          docker run --rm -v "$PWD:/input:ro" --workdir /input \
+            lycheeverse/lychee:0.24.2 \
+            --offline --no-progress --include-fragments \
+            --exclude-path "$RECORD_DIR" .
+
+      # Run in Alpine, not on the runner, so CI uses the same busybox sh and awk
+      # the script is written against.
+      - name: Structure check
+        run: |
+          docker run --rm -v "$PWD:/input:ro" --workdir /input \
+            -e CHECK_DOCS_RECORD_DIR="$RECORD_DIR" \
+            alpine:3.22 sh scripts/check-docs.sh
