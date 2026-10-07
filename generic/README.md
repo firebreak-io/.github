@@ -6,7 +6,7 @@ and nothing calls back here.
 
 It is enforced twice: coding agents check the docs before every commit, as
 instructed by `AGENTS.md`, and a GitHub Actions workflow checks again on every
-pull request and every push to the default branch.
+push and every pull request.
 
 ## What is here
 
@@ -30,10 +30,15 @@ mkdir -p docs/standards docs/adr docs/runbooks scripts .github/workflows
 cp "$GENERIC/standard.md"                docs/standards/documentation.md
 cp "$GENERIC/check-docs.sh"              scripts/check-docs.sh
 cp "$GENERIC/workflows/docs.yml"         .github/workflows/docs.yml
-cp "$GENERIC/templates/adr-template.md"  docs/adr/0000-template.md
-cp "$GENERIC/templates/adr-index.md"     docs/adr/README.md
-cp "$GENERIC/templates/runbook-index.md" docs/runbooks/README.md
+
+# Only where none exists yet: an existing index keeps its rows.
+[ -e docs/adr/0000-template.md ] || cp "$GENERIC/templates/adr-template.md"  docs/adr/0000-template.md
+[ -e docs/adr/README.md ]        || cp "$GENERIC/templates/adr-index.md"     docs/adr/README.md
+[ -e docs/runbooks/README.md ]   || cp "$GENERIC/templates/runbook-index.md" docs/runbooks/README.md
 ```
+
+If an index already existed, check it has the table the structure check reads:
+one row per document, each linking to its file.
 
 Then:
 
@@ -62,9 +67,10 @@ ADR or a runbook: that row is what the structure check looks for.
   `docker: command not found` rather than a documentation finding.
 - **`actions/checkout` at the workspace root.** No `path:` input: both checks run
   against the workspace root.
-- **Your default branch.** The workflow runs on pushes to `main`. If your
-  default branch has another name, change it in the `on.push.branches` list.
-  Add no other branch or path filter: the workflow's comments say why.
+- **No branch or path filter.** The workflow runs on every push, so it needs
+  no edit whatever the default branch is called. A branch with an open pull
+  request is checked twice per push, which costs about a minute of runner
+  time. The workflow's comments say why the filters stay off.
 - **A required status check.** CI alone does not block a merge. Add the `docs`
   job as a required status check in the default branch's protection rules.
 

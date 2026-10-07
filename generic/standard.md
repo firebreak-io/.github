@@ -116,7 +116,7 @@ The same two checks run in two places:
 
 - **Before every commit, by the agent making it.** `AGENTS.md` instructs coding
   agents to run both checks and fix any finding before committing.
-- **On every pull request and every push to the default branch, in CI.**
+- **On every push and every pull request, in CI.**
   `.github/workflows/docs.yml` runs both checks, so a commit made without an
   agent is still caught. It blocks a merge only once it is a required status
   check in the repository's branch protection.

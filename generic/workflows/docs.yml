@@ -2,12 +2,14 @@ name: Docs
 
 # Link and structure checks for docs/standards/documentation.md.
 #
-# No branch filter on pull_request: `branches` filters the BASE branch, so a
-# filter of [main] silently skips every stacked pull request. No path filter:
-# renaming a non-Markdown file rots links without touching any .md.
+# No branch filter on push: a filter naming one branch skips the default
+# branch of any repository that calls it something else, and a branch with no
+# pull request open gets no check at all. No branch filter on pull_request
+# either: `branches` filters the BASE branch, so a filter of [main] silently
+# skips every stacked pull request. No path filter: renaming a non-Markdown
+# file rots links without touching any .md.
 on:
   push:
-    branches: [main]
   pull_request:
 
 permissions:
