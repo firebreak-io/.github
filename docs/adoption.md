@@ -96,8 +96,8 @@ earned.
 ## What you will hit first
 
 - **Root Markdown that is not on the allowlist.** The allowlist is
-  `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`,
-  `CODE_OF_CONDUCT.md` and `SUPPORT.md`. A `QUICKSTART.md` or a
+  `README.md`, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`,
+  `SECURITY.md`, `CODE_OF_CONDUCT.md` and `SUPPORT.md`. A `QUICKSTART.md` or a
   `SESSION_SUMMARY.md` at the root is what the standard exists to route: the
   first is a runbook, the second is a point-in-time record.
 - **An ADR or runbook with no index row.** The index table is the only
@@ -107,6 +107,11 @@ earned.
   `docs/adr/` nor `docs/runbooks/` may have subdirectories.
 - **A `Roadmap` or `TODO` heading.** Rule 7 sends what is planned to the
   tracker. Prose about a roadmap is fine; a section named after one is not.
+  The list is a heuristic, so a heading such as `Roadmap API` fails too:
+  rename it. ADRs are exempt.
+- **A check that does not block merges.** Running the workflow is not enough.
+  Add the job as a required status check in the default branch's protection
+  rules.
 
 ## Starting your ADR and runbook indexes
 

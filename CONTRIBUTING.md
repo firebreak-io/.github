@@ -18,13 +18,14 @@ One question routes any document to one home:
 | What did this review find? | The pull request or issue |
 
 Do not add a new Markdown file to the repository root. The allowlist is
-`README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`,
-`CODE_OF_CONDUCT.md` and `SUPPORT.md`.
+`README.md`, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`,
+`SECURITY.md`, `CODE_OF_CONDUCT.md` and `SUPPORT.md`.
 
 The rules people get wrong:
 
 - **ADRs are immutable once accepted.** Supersede with a new ADR rather than
-  rewriting one. Anything appended to over time is a runbook, not an ADR.
+  rewriting one, and mark the old one `Superseded by ADR-NNNN`. Anything
+  appended to over time is a runbook, not an ADR.
 - **Runbooks are meant to be edited.** When something costs you an afternoon,
   append it.
 - **Review findings stay in the pull request.** Anything still true after

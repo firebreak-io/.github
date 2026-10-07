@@ -25,8 +25,9 @@ set -eu
 # and a spelling nothing enforces drifts repository by repository. The three
 # community health files are present because GitHub creates them at the root
 # with fixed meanings and surfaces them in its own UI, so rejecting them would
-# make the check wrong rather than strict.
-ROOT_ALLOWLIST="README.md AGENTS.md CONTRIBUTING.md CHANGELOG.md SECURITY.md CODE_OF_CONDUCT.md SUPPORT.md"
+# make the check wrong rather than strict. CLAUDE.md is present for the same
+# reason: Claude Code reads it from the root, and only from there.
+ROOT_ALLOWLIST="README.md AGENTS.md CLAUDE.md CONTRIBUTING.md CHANGELOG.md SECURITY.md CODE_OF_CONDUCT.md SUPPORT.md"
 ADR_DIR="docs/adr"
 ADR_INDEX="$ADR_DIR/README.md"
 
@@ -393,7 +394,9 @@ done
 # right the day it is written and wrong a month later, and no reviewer catches
 # that, because nothing in the diff is wrong.
 #
-# Scoped to the homes the standard governs: the repository root, plus docs/.
+# Scoped to the homes the standard governs: the repository root, plus docs/,
+# minus docs/adr and the record directory. An ADR is a decision record, not a
+# living document, and its Consequences may name work it leaves for later.
 # Scanning the whole tree failed the build on content nobody here wrote, because
 # find respects neither .gitignore nor hidden directories: node_modules/ in a
 # TypeScript repo, vendor/ in a Go one, and the git-ignored .superpowers/
@@ -429,7 +432,7 @@ hits=$(mktemp)
 find . -maxdepth 1 -type f -name '*.md' \
     -exec awk -v pat="$FORWARD_HEADINGS" "$HEADINGS_AWK" {} + >>"$hits" || extractor_failed=1
 if [ -d ./docs ]; then
-    find ./docs -type f -name '*.md' ! -path "$RECORD_DIR/*" \
+    find ./docs -type f -name '*.md' ! -path "$RECORD_DIR/*" ! -path "./$ADR_DIR/*" \
         -exec awk -v pat="$FORWARD_HEADINGS" "$HEADINGS_AWK" {} + >>"$hits" || extractor_failed=1
 fi
 if [ "$extractor_failed" -ne 0 ]; then
@@ -448,7 +451,9 @@ if [ -n "$forward_hits" ]; then
     note "  A living document describes the present. Move this to the issue"
     note "  tracker and link to it. See rule 7 of the documentation standard."
     note "  Rejected heading words: $FORWARD_TERMS."
-    note "  $RECORD_DIR is exempt: a spec or a plan is a point-in-time record."
+    note "  $RECORD_DIR and ./$ADR_DIR are exempt: they hold point-in-time records."
+    note "  The list is a heuristic: a heading naming something that already"
+    note "  exists, such as \"Roadmap API\", fails too. Rename the heading."
     failed=1
 fi
 
