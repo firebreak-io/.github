@@ -29,16 +29,18 @@ From the root of the repository adopting the standard, with this folder at
 mkdir -p docs/standards docs/adr docs/runbooks scripts .github/workflows
 cp "$GENERIC/standard.md"                docs/standards/documentation.md
 cp "$GENERIC/check-docs.sh"              scripts/check-docs.sh
-cp "$GENERIC/workflows/docs.yml"         .github/workflows/docs.yml
 
-# Only where none exists yet: an existing index keeps its rows.
+# Only where none exists yet: an existing workflow keeps its jobs, and an
+# existing index keeps its rows.
+[ -e .github/workflows/docs.yml ] || cp "$GENERIC/workflows/docs.yml" .github/workflows/docs.yml
 [ -e docs/adr/0000-template.md ] || cp "$GENERIC/templates/adr-template.md"  docs/adr/0000-template.md
 [ -e docs/adr/README.md ]        || cp "$GENERIC/templates/adr-index.md"     docs/adr/README.md
 [ -e docs/runbooks/README.md ]   || cp "$GENERIC/templates/runbook-index.md" docs/runbooks/README.md
 ```
 
 If an index already existed, check it has the table the structure check reads:
-one row per document, each linking to its file.
+one row per document, each linking to its file. If `.github/workflows/docs.yml`
+already existed, merge the checks into it as described under CI requirements.
 
 Then:
 
@@ -87,7 +89,8 @@ checkout step.
   navigation into those directories, so a file missing from it is invisible.
   The row needs a Markdown link, `[Title](0001-title.md)`, not just the name.
 - **A misnamed or nested file.** An ADR must be `NNNN-title.md`, and neither
-  `docs/adr/` nor `docs/runbooks/` may have subdirectories.
+  `docs/adr/` nor `docs/runbooks/` may keep Markdown in a subdirectory.
+  A subdirectory of images is fine.
 - **A `Roadmap` or `TODO` heading.** Rule 6 sends what is planned to the
   tracker. Prose about a roadmap is fine; a section named after one is not.
 

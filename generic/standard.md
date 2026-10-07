@@ -107,8 +107,9 @@ The status is one of:
 | `Superseded by ADR-NNNN` | Replaced. The only edit an accepted ADR takes besides typo and link fixes |
 | `Deprecated` | No longer applies, and nothing replaced it |
 
-Runbooks also sit directly inside `docs/runbooks/`. Neither directory has
-subdirectories, so its index is the whole of it.
+Runbooks also sit directly inside `docs/runbooks/`. Neither directory keeps
+Markdown in a subdirectory, so its index is the whole of it. A subdirectory of
+images or other assets that the documents link to is fine.
 
 ## Verification
 
