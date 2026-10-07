@@ -97,7 +97,8 @@ Context, then Decision, then Consequences. Files are named `NNNN-kebab-title.md`
 with four digits, allocated in order, directly inside `docs/adr/`. Every ADR
 carries a `**Status:**` line with a value and appears in the ADR index as a
 Markdown link. Runbooks also sit directly inside `docs/runbooks/`: neither
-directory has subdirectories, so its index is the whole of it.
+directory keeps Markdown in a subdirectory, so its index is the whole of it. A
+subdirectory of images or other assets that the documents link to is fine.
 
 The status is one of:
 

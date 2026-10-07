@@ -13,7 +13,7 @@
 #   1. Every .md at the repository root is on the allowlist.
 #   2. Every ADR is named NNNN-title.md, carries a status and is linked from
 #      the ADR index; every runbook is linked from the runbook index; neither
-#      directory has subdirectories.
+#      directory keeps Markdown in a subdirectory.
 #   3. No living document carries a forward-looking section heading, ATX or
 #      Setext.
 
@@ -128,6 +128,9 @@ HEADINGS_AWK='
         }
     }
     infence { prev = ""; next }
+    # Four spaces of indent after a blank line is an indented code block, not
+    # heading text: a "---" under it is a thematic break.
+    indent >= 4 && prev == "" { next }
     indent < 4 && rest ~ /^(=+|-+)[ \t]*$/ && prev != "" {
         if (tolower(prev) ~ pat) { print FILENAME ":" prevline ":" prev }
         prev = ""; next
@@ -183,7 +186,8 @@ fi
 # This reads the filesystem, not the git index, so an untracked scratch note at
 # the root fails too. That is deliberate: a file that trips this check today is
 # a file that gets committed by accident tomorrow.
-for candidate in *.md; do
+# Hidden names too: "*.md" never expands to ".scratch.md" or ".md".
+for candidate in *.md .*.md .md; do
     [ -e "$candidate" ] || continue
     case " $ROOT_ALLOWLIST " in
         *" $candidate "*)
@@ -267,13 +271,14 @@ strip_fences() {
 }
 
 # Every Markdown file in docs/adr is the index, the template or an ADR named
-# NNNN-title.md, and neither directory has subdirectories. The loop below
+# NNNN-title.md, and neither directory keeps Markdown in a subdirectory. A
+# subdirectory of images or other assets is fine, so only Markdown is looked for. The loop below
 # only looks at files that match its pattern directly inside the directory,
 # so a misnamed or nested file would otherwise escape every check in it.
 # The "?" in the pattern requires a title: "0001-.md" has none. A hidden file
 # is rejected outright, because "*.md" never expands to one and the loop below
 # would never see it.
-for doc in "$ADR_DIR"/.*.md docs/runbooks/.*.md; do
+for doc in "$ADR_DIR"/.*.md "$ADR_DIR"/.md docs/runbooks/.*.md docs/runbooks/.md; do
     [ -e "$doc" ] || continue
     note "$doc is a hidden file, so nothing indexes or checks it."
     note "  Rename it without the leading dot and add it to its index."
@@ -298,7 +303,7 @@ for dir in "$ADR_DIR" docs/runbooks; do
         printf '%s\n' "$nested" | while IFS= read -r doc; do
             note "$doc is in a subdirectory of $dir."
         done
-        note "  $dir has no subdirectories, so its index is the whole of it."
+        note "  $dir keeps no Markdown in subdirectories, so its index is the whole of it."
         note "  Move these files up into $dir and add them to its index."
         failed=1
     fi
@@ -331,8 +336,9 @@ do
         # This runs regardless of whether the index exists, because it has
         # nothing to do with the index, and applies to ADRs only: a runbook
         # carries no Status line and is not held to this rule.
-        # A Status line with nothing after it says as little as no line.
-        if [ "$dir" = "$ADR_DIR" ] && ! grep -qE '^\*\*Status:\*\*[[:space:]]*[^[:space:]]' "$doc"; then
+        # A Status line with nothing after it says as little as no line, and
+        # one inside a fenced example is not the ADR's own.
+        if [ "$dir" = "$ADR_DIR" ] && ! strip_fences "$doc" | grep -qE '^\*\*Status:\*\*[[:space:]]*[^[:space:]]'; then
             note "$doc has no **Status:** line, or the line is empty."
             note "  Every ADR carries one. Start from 0000-template.md."
             failed=1
@@ -374,10 +380,10 @@ do
             # write the link "exactly as ($name)" when what they had was
             # already correct.
             #
-            # The "]" before the "(" makes it a Markdown link. Without it,
-            # a row holding the filename in plain parentheses passed while
-            # linking to nothing.
-            row="^\\|.*\\]\\((\\./)?$esc(#[^)]*)?( \"[^\"]*\")?\\)"
+            # A complete "[label](" makes it a Markdown link: a filename in
+            # plain parentheses, a bare "](" or an image "![label](" all
+            # passed while giving no link to follow.
+            row="^\\|.*[^!]\\[[^]]+\\]\\((\\./)?$esc(#[^)]*)?( \"[^\"]*\")?\\)"
             if ! strip_fences "$index" | grep -qE "$row"; then
                 note "$doc has no row in the index table in $index."
                 note "  Add a table row linking it as [Title]($name). A ./ prefix, a"
@@ -405,8 +411,8 @@ done
 # that, because nothing in the diff is wrong.
 #
 # Scoped to the homes the standard governs: the repository root, plus docs/,
-# minus docs/adr and the record directory. An ADR is a decision record, not a
-# living document, and its Consequences may name work it leaves for later.
+# minus ADRs and the record directory. An ADR is a decision record, not a
+# living document (its index and template are, and stay in scope), and its Consequences may name work it leaves for later.
 # Scanning the whole tree failed the build on content nobody here wrote, because
 # find respects neither .gitignore nor hidden directories: node_modules/ in a
 # TypeScript repo, vendor/ in a Go one, and the git-ignored .superpowers/
@@ -442,7 +448,8 @@ hits=$(mktemp)
 find . -maxdepth 1 -type f -name '*.md' \
     -exec awk -v pat="$FORWARD_HEADINGS" "$HEADINGS_AWK" {} + >>"$hits" || extractor_failed=1
 if [ -d ./docs ]; then
-    find ./docs -type f -name '*.md' ! -path "$RECORD_DIR/*" ! -path "./$ADR_DIR/*" \
+    find ./docs -type f -name '*.md' ! -path "$RECORD_DIR/*" \
+        ! \( -path "./$ADR_DIR/[0-9][0-9][0-9][0-9]-?*.md" ! -name 0000-template.md \) \
         -exec awk -v pat="$FORWARD_HEADINGS" "$HEADINGS_AWK" {} + >>"$hits" || extractor_failed=1
 fi
 if [ "$extractor_failed" -ne 0 ]; then
@@ -461,7 +468,7 @@ if [ -n "$forward_hits" ]; then
     note "  A living document describes the present. Move this to the issue"
     note "  tracker and link to it. See rule 7 of the documentation standard."
     note "  Rejected heading words: $FORWARD_TERMS."
-    note "  $RECORD_DIR and ./$ADR_DIR are exempt: they hold point-in-time records."
+    note "  $RECORD_DIR and the ADRs themselves are exempt: they are point-in-time records."
     note "  The list is a heuristic: a heading naming something that already"
     note "  exists, such as \"Roadmap API\", fails too. Rename the heading."
     failed=1

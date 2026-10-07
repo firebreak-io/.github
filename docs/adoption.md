@@ -104,7 +104,8 @@ earned.
   navigation into those directories, so a file missing from it is invisible.
   The row needs a Markdown link, `[Title](0001-title.md)`, not just the name.
 - **A misnamed or nested file.** An ADR must be `NNNN-title.md`, and neither
-  `docs/adr/` nor `docs/runbooks/` may have subdirectories.
+  `docs/adr/` nor `docs/runbooks/` may keep Markdown in a subdirectory.
+  A subdirectory of images is fine.
 - **A `Roadmap` or `TODO` heading.** Rule 7 sends what is planned to the
   tracker. Prose about a roadmap is fine; a section named after one is not.
   The list is a heuristic, so a heading such as `Roadmap API` fails too:
