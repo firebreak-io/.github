@@ -79,8 +79,10 @@ Answer one question about the document you are holding:
 ## ADR format
 
 Context, then Decision, then Consequences. Files are named `NNNN-kebab-title.md`
-with four digits, allocated in order. Every ADR carries a `**Status:**` line and
-appears in the ADR index.
+with four digits, allocated in order, directly inside `docs/adr/`. Every ADR
+carries a `**Status:**` line with a value and appears in the ADR index as a
+Markdown link. Runbooks also sit directly inside `docs/runbooks/`: neither
+directory has subdirectories, so its index is the whole of it.
 
 ## Enforcement
 
@@ -90,7 +92,7 @@ See [adoption](../adoption.md).
 | Check | Catches |
 |---|---|
 | Link check | Relative links that do not resolve, and `#fragment` anchors that name no heading |
-| Structure check | Root Markdown not on the allowlist, an ADR or runbook missing from its index, an ADR with no Status line, and a forward-looking heading in a living document |
+| Structure check | Root Markdown not on the allowlist, a misnamed or nested ADR or runbook, an ADR or runbook with no link in its index, an ADR with an empty or missing Status line, and a forward-looking heading in a living document |
 
 What is deliberately not checked: CI does not diff against the base branch to
 detect edits to an accepted ADR. Typo and link fixes are legitimate under rule

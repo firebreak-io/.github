@@ -11,8 +11,9 @@
 #
 # Checks:
 #   1. Every .md at the repository root is on the allowlist.
-#   2. Every ADR on disk carries a status and is linked from the ADR index;
-#      every runbook on disk is linked from the runbook index.
+#   2. Every ADR is named NNNN-title.md, carries a status and is linked from
+#      the ADR index; every runbook is linked from the runbook index; neither
+#      directory has subdirectories.
 #   3. No living document carries a forward-looking section heading, ATX or
 #      Setext.
 
@@ -263,6 +264,35 @@ strip_fences() {
     ' "$1"
 }
 
+# Every Markdown file in docs/adr is the index, the template or an ADR named
+# NNNN-title.md, and neither directory has subdirectories. The loop below
+# only looks at files that match its pattern directly inside the directory,
+# so a misnamed or nested file would otherwise escape every check in it.
+for doc in "$ADR_DIR"/*.md; do
+    [ -e "$doc" ] || continue
+    case ${doc##*/} in
+        README.md|[0-9][0-9][0-9][0-9]-*.md)
+            ;;
+        *)
+            note "$doc is not named NNNN-title.md."
+            note "  Rename it to the next four-digit number in $ADR_INDEX."
+            failed=1
+            ;;
+    esac
+done
+for dir in "$ADR_DIR" docs/runbooks; do
+    [ -d "$dir" ] || continue
+    nested=$(find "$dir" -mindepth 2 -type f -name '*.md')
+    if [ -n "$nested" ]; then
+        printf '%s\n' "$nested" | while IFS= read -r doc; do
+            note "$doc is in a subdirectory of $dir."
+        done
+        note "  $dir has no subdirectories, so its index is the whole of it."
+        note "  Move these files up into $dir and add them to its index."
+        failed=1
+    fi
+done
+
 # Fields: directory, index file, filename pattern, name to skip.
 for pair in \
     "$ADR_DIR|$ADR_INDEX|[0-9][0-9][0-9][0-9]-*.md|0000-template.md" \
@@ -290,8 +320,9 @@ do
         # This runs regardless of whether the index exists, because it has
         # nothing to do with the index, and applies to ADRs only: a runbook
         # carries no Status line and is not held to this rule.
-        if [ "$dir" = "$ADR_DIR" ] && ! grep -qE '^\*\*Status:\*\*' "$doc"; then
-            note "$doc has no **Status:** line."
+        # A Status line with nothing after it says as little as no line.
+        if [ "$dir" = "$ADR_DIR" ] && ! grep -qE '^\*\*Status:\*\*[[:space:]]*[^[:space:]]' "$doc"; then
+            note "$doc has no **Status:** line, or the line is empty."
             note "  Every ADR carries one. Start from 0000-template.md."
             failed=1
         fi
@@ -331,10 +362,14 @@ do
             # #fragment, and a "title". Rejecting those told the author to
             # write the link "exactly as ($name)" when what they had was
             # already correct.
-            row="^\\|.*\\((\\./)?$esc(#[^)]*)?( \"[^\"]*\")?\\)"
+            #
+            # The "]" before the "(" makes it a Markdown link. Without it,
+            # a row holding the filename in plain parentheses passed while
+            # linking to nothing.
+            row="^\\|.*\\]\\((\\./)?$esc(#[^)]*)?( \"[^\"]*\")?\\)"
             if ! strip_fences "$index" | grep -qE "$row"; then
                 note "$doc has no row in the index table in $index."
-                note "  Add a table row linking it as ($name). A ./ prefix, a"
+                note "  Add a table row linking it as [Title]($name). A ./ prefix, a"
                 note "  #fragment and a \"title\" are all accepted; a mention in"
                 note "  prose or inside a code fence is not a row."
                 failed=1

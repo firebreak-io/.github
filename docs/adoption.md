@@ -102,6 +102,9 @@ earned.
   first is a runbook, the second is a point-in-time record.
 - **An ADR or runbook with no index row.** The index table is the only
   navigation into those directories, so a file missing from it is invisible.
+  The row needs a Markdown link, `[Title](0001-title.md)`, not just the name.
+- **A misnamed or nested file.** An ADR must be `NNNN-title.md`, and neither
+  `docs/adr/` nor `docs/runbooks/` may have subdirectories.
 - **A `Roadmap` or `TODO` heading.** Rule 7 sends what is planned to the
   tracker. Prose about a roadmap is fine; a section named after one is not.
 
