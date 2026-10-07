@@ -8,7 +8,8 @@ root is not the default.
 ### Before every commit
 
 Run both checks from the repository root and fix every finding before you
-commit. Never commit around a failure, and never weaken a check to make it pass.
+commit. Never commit around a failure, and never change or relax a check
+without explicit approval from a human.
 
 1. **Structure check:**
 
@@ -33,11 +34,14 @@ commit. Never commit around a failure, and never weaken a check to make it pass.
 
 Then confirm the things no script can see:
 
-- An accepted ADR changed only for a typo, heading or broken link. Anything
-  more is a new ADR that supersedes it.
+- An accepted ADR changed only for a typo, heading or broken link, or to mark
+  it `Superseded by ADR-NNNN`. Anything more is a new ADR that supersedes it.
 - A new ADR started from `docs/adr/0000-template.md` and has a row in
   `docs/adr/README.md`. A new runbook has a row in `docs/runbooks/README.md`.
-- Nothing planned, deferred or in progress went into a document. It went to the
-  issue tracker, and a document that needs to mention it links there.
-- Every review finding or spec item you are deferring has an issue.
+- Nothing planned, deferred or in progress went into a living document. It went
+  to the issue tracker, and a document that needs to mention it links there.
+  Specs and plans in `docs/records/` are the exception, and only until the pull
+  request that carries them merges.
+- Every review finding or spec item you are deferring has an issue that links
+  back to the pull request or spec it came from.
 - No review write-up, session summary or scratch note was committed.

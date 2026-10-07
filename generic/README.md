@@ -6,7 +6,7 @@ and nothing calls back here.
 
 It is enforced twice: coding agents check the docs before every commit, as
 instructed by `AGENTS.md`, and a GitHub Actions workflow checks again on every
-push and pull request.
+pull request and every push to the default branch.
 
 ## What is here
 
@@ -62,8 +62,11 @@ ADR or a runbook: that row is what the structure check looks for.
   `docker: command not found` rather than a documentation finding.
 - **`actions/checkout` at the workspace root.** No `path:` input: both checks run
   against the workspace root.
-- **No branch or path filter.** The workflow's comments say why. Keep them off
-  when you edit the triggers.
+- **Your default branch.** The workflow runs on pushes to `main`. If your
+  default branch has another name, change it in the `on.push.branches` list.
+  Add no other branch or path filter: the workflow's comments say why.
+- **A required status check.** CI alone does not block a merge. Add the `docs`
+  job as a required status check in the default branch's protection rules.
 
 To add the checks to a workflow you already run instead, copy the `env` block
 and the two check steps from `docs.yml` into an existing Linux job, after its
@@ -76,6 +79,9 @@ checkout step.
   first is a runbook, the second is a point-in-time record.
 - **An ADR or runbook with no index row.** The index table is the only
   navigation into those directories, so a file missing from it is invisible.
+  The row needs a Markdown link, `[Title](0001-title.md)`, not just the name.
+- **A misnamed or nested file.** An ADR must be `NNNN-title.md`, and neither
+  `docs/adr/` nor `docs/runbooks/` may have subdirectories.
 - **A `Roadmap` or `TODO` heading.** Rule 6 sends what is planned to the
   tracker. Prose about a roadmap is fine; a section named after one is not.
 
