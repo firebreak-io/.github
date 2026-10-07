@@ -245,6 +245,7 @@ strip_fences() {
             while (substr(s, n + 1, 1) == ch) n++
             return n
         }
+        { sub(/\r$/, "", $0) }
         { match($0, /^ */); indent = RLENGTH; rest = substr($0, indent + 1) }
         indent < 4 {
             btick = fence_run(rest, "`")
@@ -269,10 +270,19 @@ strip_fences() {
 # NNNN-title.md, and neither directory has subdirectories. The loop below
 # only looks at files that match its pattern directly inside the directory,
 # so a misnamed or nested file would otherwise escape every check in it.
+# The "?" in the pattern requires a title: "0001-.md" has none. A hidden file
+# is rejected outright, because "*.md" never expands to one and the loop below
+# would never see it.
+for doc in "$ADR_DIR"/.*.md docs/runbooks/.*.md; do
+    [ -e "$doc" ] || continue
+    note "$doc is a hidden file, so nothing indexes or checks it."
+    note "  Rename it without the leading dot and add it to its index."
+    failed=1
+done
 for doc in "$ADR_DIR"/*.md; do
     [ -e "$doc" ] || continue
     case ${doc##*/} in
-        README.md|[0-9][0-9][0-9][0-9]-*.md)
+        README.md|[0-9][0-9][0-9][0-9]-?*.md)
             ;;
         *)
             note "$doc is not named NNNN-title.md."
@@ -296,7 +306,7 @@ done
 
 # Fields: directory, index file, filename pattern, name to skip.
 for pair in \
-    "$ADR_DIR|$ADR_INDEX|[0-9][0-9][0-9][0-9]-*.md|0000-template.md" \
+    "$ADR_DIR|$ADR_INDEX|[0-9][0-9][0-9][0-9]-?*.md|0000-template.md" \
     "docs/runbooks|docs/runbooks/README.md|*.md|README.md"
 do
     dir=${pair%%|*}; rest=${pair#*|}
